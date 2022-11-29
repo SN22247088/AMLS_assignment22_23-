@@ -1,0 +1,34 @@
+#%%
+#Import Libraries 
+import pandas
+import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import SGDClassifier
+from sklearn.metrics import accuracy_score
+from PIL import Image
+# %%
+#Load Data #importing the labeled csv
+
+features = pandas.read_csv('/Users/samreenabbas/Downloads/ML Coursework/dataset_AMLS_22-23/celeba/labels.csv', delimiter = '\t')
+y = features["smiling"].values
+
+#%%
+#load data #importing the images
+
+x = []
+for i in range(len(y)):
+    img = Image.open("/Users/samreenabbas/Downloads/ML Coursework/dataset_AMLS_22-23/celeba/img/" + str(i) + ".jpg")
+    img = np.array(img).flatten()
+    x.append(img)
+    
+# %%
+#train and test sets
+X_train, X_test, Y_train, Y_test = train_test_split(x, y, test_size = 0.2)
+
+# %%
+#classifier - SGD
+clf = SGDClassifier(learning_rate = 'optimal', penalty = 'l1', alpha = 1e-4, max_iter = 2500, shuffle = True, random_state = 42, verbose = True, n_jobs = -1)
+clf.fit(X_train, Y_train)
+y_pred = clf.predict(X_test)
+print('Accuracy: {:.2f}'.format(accuracy_score(Y_test, y_pred)))
+# %%

@@ -1,0 +1,35 @@
+#%%
+#Import Libraries 
+import pandas
+import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score
+from PIL import Image
+from sklearn.tree import DecisionTreeClassifier 
+# %%
+#Load Data #importing the labeled csv
+
+features = pandas.read_csv('/Users/samreenabbas/Downloads/ML Coursework/dataset_AMLS_22-23/cartoon_set/labels.csv', delimiter = '\t')
+y = features["eye_color"].values
+
+#%%
+#load data #importing the images
+x = []
+for i in range(len(y)):
+    img = Image.open("/Users/samreenabbas/Downloads/ML Coursework/dataset_AMLS_22-23/cartoon_set/img/" + str(i) + ".png")
+    box = (230, 240, 310, 300)
+    img = img.crop(box)
+    img = np.array(img).flatten()
+    x.append(img)
+    
+# %%
+#train and test sets
+X_train, X_test, Y_train, Y_test = train_test_split(x, y, test_size = 0.2)
+# %%
+#classifier 
+clf = DecisionTreeClassifier()
+clf.fit(X_train, Y_train)
+y_pred = clf.predict(X_test)
+print('Accuracy: {:.2f}'.format(accuracy_score(Y_test, y_pred)))
+
+# %%
