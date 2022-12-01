@@ -30,12 +30,7 @@ X_train, X_test, Y_train, Y_test = train_test_split(x, y, test_size = 0.2)
 
 # %%
 #classifier - SGD
-#clf = SGDClassifier(learning_rate = 'optimal', penalty = 'l1', alpha = 1e-4, max_iter = 4000, random_state = 42, verbose = True)
-#clf.fit(X_train, Y_train)
-#y_pred = clf.predict(X_test)
-#print('Accuracy: {:.2f}'.format(accuracy_score(Y_test, y_pred)))
-# %%classifier - SVM
-clf = svm.SVC()
+clf = SGDClassifier(learning_rate = 'optimal', penalty = 'l1', alpha = 1e-4, max_iter = 4000, random_state = 42, verbose = True)
 clf.fit(X_train, Y_train)
 y_pred = clf.predict(X_test)
 print('Accuracy: {:.2f}'.format(accuracy_score(Y_test, y_pred)))
