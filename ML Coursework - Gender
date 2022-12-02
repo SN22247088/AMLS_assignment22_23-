@@ -36,3 +36,10 @@ y_pred = clf.predict(X_test)
 print('Accuracy: {:.2f}'.format(accuracy_score(Y_test, y_pred)))
 
 # %%
+#Cross Validation of model: K - Fold
+k_folds = KFold(n_splits = 5)
+scores = cross_val_score(clf, X_test, Y_test, cv = k_folds)
+print("Cross Validation Scores: ", scores)
+print("Average Score: ", scores.mean())
+print("Number of CV Scores used in Average: ", len(scores))
+# %%
