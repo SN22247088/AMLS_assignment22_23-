@@ -28,12 +28,8 @@ for i in range(len(y)):
 #train and test sets
 X_train, X_test, Y_train, Y_test = train_test_split(x, y, test_size = 0.2)
 
-# %%
-#classifier - SGD
+#defining the classifier - SGD
 clf = SGDClassifier(learning_rate = 'optimal', penalty = 'l1', alpha = 1e-4, max_iter = 4000, random_state = 42, verbose = True)
-clf.fit(X_train, Y_train)
-y_pred = clf.predict(X_test)
-print('Accuracy: {:.2f}'.format(accuracy_score(Y_test, y_pred)))
 
 # %%
 #Cross Validation of model: K - Fold
@@ -43,3 +39,10 @@ print("Cross Validation Scores: ", scores)
 print("Average Score: ", scores.mean())
 print("Number of CV Scores used in Average: ", len(scores))
 # %%
+
+# %%
+#training the model on dataset 
+clf.fit(X_train, Y_train)
+y_pred = clf.predict(X_test)
+print('Accuracy: {:.2f}'.format(accuracy_score(Y_test, y_pred)))
+
