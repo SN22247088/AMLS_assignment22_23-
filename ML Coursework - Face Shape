@@ -1,39 +1,44 @@
-#%%
 #Import Libraries 
+#General 
 import pandas
 import numpy as np
+#Image/Data processing 
+from PIL import Image
+#sklearn
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import SGDClassifier
 from sklearn.metrics import accuracy_score
-from PIL import Image
 from sklearn.ensemble import RandomForestClassifier
-# %%
-#Load Data #importing the labeled csv
+from sklearn.model_selection import KFold, cross_val_score 
+
+
+#Load Data 
+#importing the labeled csv
 
 features = pandas.read_csv('/Users/samreenabbas/Downloads/ML Coursework/dataset_AMLS_22-23/cartoon_set/labels.csv', delimiter = '\t')
 y = features["face_shape"].values
 
-#%%
-#load data #importing the images
+#importing the images
 x = []
 for i in range(len(y)):
     img = Image.open("/Users/samreenabbas/Downloads/ML Coursework/dataset_AMLS_22-23/cartoon_set/img/" + str(i) + ".png")
     img = np.array(img).flatten()
     x.append(img)
     
-# %%
+
 #train and test sets
 X_train, X_test, Y_train, Y_test = train_test_split(x, y, test_size = 0.2)
-# %%
-#classifier - random forrest 
+
+#reducing training data size due to reduce computation time 
 trainsize = 1000
 testsize = 0.4*trainsize
 X_train = X_train[0:trainsize]
 Y_train = Y_train[0:trainsize]
 X_test = X_test[0:trainsize]
 Y_test = Y_test[0:trainsize]
+
+#defining the classifier 
 clf = RandomForestClassifier()
-clf.fit(X_train, Y_train)
+clf.fit(X_train,Y_train)
 y_pred = clf.predict(X_test)
 print('Accuracy: {:.2f}'.format(accuracy_score(Y_test, y_pred)))
-# %%
