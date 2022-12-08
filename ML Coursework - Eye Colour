@@ -1,35 +1,68 @@
-#%%
 #Import Libraries 
+#general 
 import pandas
 import numpy as np
+#image processing 
+from PIL import Image
+#sklearn
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
-from PIL import Image
+from sklearn.model_selection import KFold, cross_val_score 
 from sklearn.tree import DecisionTreeClassifier 
-# %%
-#Load Data #importing the labeled csv
+from sklearn.ensemble import RandomForestClassifier 
+from sklearn.neighbors import KNeighborsClassifier 
+from sklearn.linear_model import LogisticRegression 
+
+
+#Load Data 
+#importing the labeled csv
 
 features = pandas.read_csv('/Users/samreenabbas/Downloads/ML Coursework/dataset_AMLS_22-23/cartoon_set/labels.csv', delimiter = '\t')
 y = features["eye_color"].values
 
-#%%
-#load data #importing the images
+#importing the images into an array 
 x = []
 for i in range(len(y)):
     img = Image.open("/Users/samreenabbas/Downloads/ML Coursework/dataset_AMLS_22-23/cartoon_set/img/" + str(i) + ".png")
-    box = (230, 240, 310, 300)
+    #crop image to get just the eyes
+    box = (170, 235, 330, 295)
     img = img.crop(box)
     img = np.array(img).flatten()
     x.append(img)
     
-# %%
+
 #train and test sets
 X_train, X_test, Y_train, Y_test = train_test_split(x, y, test_size = 0.2)
-# %%
-#classifier 
-clf = DecisionTreeClassifier()
-clf.fit(X_train, Y_train)
-y_pred = clf.predict(X_test)
-print('Accuracy: {:.2f}'.format(accuracy_score(Y_test, y_pred)))
+#train and test sets
+X_train, X_test, Y_train, Y_test = train_test_split(x, y, test_size = 0.2)
+trainsize = 1000
+testsize = 0.4*trainsize
+X_train = X_train[0:trainsize]
+Y_train = Y_train[0:trainsize]
+X_test = X_test[0:trainsize]
+Y_test = Y_test[0:trainsize]
 
-# %%
+
+#Defining the classifiers 
+clf = []
+clf.append(DecisionTreeClassifier())
+clf.append(RandomForestClassifier())
+clf.append(KNeighborsClassifier())
+clf.append(LogisticRegression())
+
+
+#Cross Validation of model: K - Fold
+#Cross Validation done to get best model 
+for i in range(len(clf)):
+    k_folds = KFold(n_splits = 5)
+    scores = cross_val_score(clf[i], X_test, Y_test, cv = k_folds)
+    print("Cross Validation Scores: ", scores)
+    print("Average CV Score: ", scores.mean())
+    print("Number of CV Scores used in Average: ", len(scores))
+    print("done:" ,clf[i])
+
+#training the classifier on training and test data
+clf_best = DecisionTreeClassifier()
+clf_best.fit(X_train, Y_train)
+y_pred = clf_best.predict(X_test)
+print('Accuracy: {:.2f}'.format(accuracy_score(Y_test, y_pred)))
