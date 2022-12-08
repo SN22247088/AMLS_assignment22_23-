@@ -1,48 +1,63 @@
-#%%
 #Import Libraries 
+#General
 import pandas
 import numpy as np
+#sklearn 
 from sklearn.model_selection import train_test_split
-from sklearn.linear_model import SGDClassifier
 from sklearn.metrics import accuracy_score
-from PIL import Image
-#0THER LIBRARIES 
+from sklearn.model_selection import KFold, cross_val_score 
+from sklearn.linear_model import SGDClassifier
 from sklearn import svm
-# %%
-#Load Data #importing the labeled csv
+from sklearn.naive_bayes import GaussianNB 
+from sklearn.linear_model import LogisticRegression 
+#image/data processing 
+from PIL import Image
 
+
+#Load Data 
+#importing the labeled csv
 features = pandas.read_csv('/Users/samreenabbas/Downloads/ML Coursework/dataset_AMLS_22-23/celeba/labels.csv', delimiter = '\t')
 y = features["gender"].values
 
-#%%
-#load data #importing the images
- 
+#importing the images
 folder_dir = "/Users/samreenabbas/Downloads/ML Coursework/dataset_AMLS_22-23/celeba/img/"
 x = []
+#adding flattened images to an array
 for i in range(len(y)):
     img = Image.open(folder_dir + str(i) + ".jpg")
     img = np.array(img).flatten()
     x.append(img)
     
-# %%
+
 #train and test sets
 X_train, X_test, Y_train, Y_test = train_test_split(x, y, test_size = 0.2)
 
-#defining the classifier - SGD
-clf = SGDClassifier(learning_rate = 'optimal', penalty = 'l1', alpha = 1e-4, max_iter = 4000, random_state = 42, verbose = True)
 
-# %%
+#Defining the classifiers 
+clf = []
+clf.append(SGDClassifier(learning_rate = 'optimal', penalty = 'l1', alpha = 1e-4, max_iter = 4000, random_state = 42, verbose = True, loss = 'log'))
+clf.append(svm.SVC(verbose = True))
+clf.append(GaussianNB())
+clf.append(LogisticRegression(verbose = True))
+
+
 #Cross Validation of model: K - Fold
-k_folds = KFold(n_splits = 5)
-scores = cross_val_score(clf, X_test, Y_test, cv = k_folds)
-print("Cross Validation Scores: ", scores)
-print("Average Score: ", scores.mean())
-print("Number of CV Scores used in Average: ", len(scores))
-# %%
+#Cross Validation done to get best model 
+for i in range(len(clf)):
+    trainsize = 1000  # using a smaller amount of data to reduce computation time 
+    X_test = X_test[0:trainsize]
+    Y_test = Y_test[0:trainsize]
+    k_folds = KFold(n_splits = 5)
+    scores = cross_val_score(clf[i], X_test, Y_test, cv = k_folds)
+    print("Cross Validation Scores: ", scores)
+    print("Average CV Score: ", scores.mean())
+    print("Number of CV Scores used in Average: ", len(scores))
+    print("done:" ,clf[i])
 
-# %%
-#training the model on dataset 
-clf.fit(X_train, Y_train)
-y_pred = clf.predict(X_test)
+
+#training the model on training and test set 
+clf_best = LogisticRegression()
+clf_best.fit(X_train, Y_train)
+y_pred = clf_best.predict(X_test)
 print('Accuracy: {:.2f}'.format(accuracy_score(Y_test, y_pred)))
 
