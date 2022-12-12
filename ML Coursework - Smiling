@@ -1,3 +1,4 @@
+#%%
 #Import Libraries 
 import pandas
 import numpy as np
@@ -7,18 +8,21 @@ from PIL import Image
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import SGDClassifier
 from sklearn.metrics import accuracy_score
+from sklearn.metrics import classification_report, confusion_matrix
 from sklearn.model_selection import KFold, cross_val_score 
 from sklearn import svm
 from sklearn.naive_bayes import GaussianNB 
 from sklearn.linear_model import LogisticRegression 
-
-
+from sklearn.model_selection import GridSearchCV
+# %%
 #Load Data 
 #importing the labeled csv
 
 features = pandas.read_csv('/Users/samreenabbas/Downloads/ML Coursework/dataset_AMLS_22-23/celeba/labels.csv', delimiter = '\t')
 y = features["smiling"].values
- 
+
+#%%
+#load data 
 #importing the images
 
 x = []
@@ -28,35 +32,45 @@ for i in range(len(y)):
     img = np.array(img).flatten()
     x.append(img)
     
-
+# %%
 #train and test sets
 X_train, X_test, Y_train, Y_test = train_test_split(x, y, test_size = 0.2)
-
-
+trainsize = 1000 #using a smaller amount of data to reduce computation time 
+X_train_mini = X_train[0:trainsize]
+Y_train_mini = Y_train[0:trainsize] 
+X_test_mini = X_test[0:trainsize]
+Y_test_mini = Y_test[0:trainsize]
+# %%
 #Defining the classifiers 
 clf = []
-clf.append(SGDClassifier(learning_rate = 'optimal', penalty = 'l1', alpha = 1e-4, max_iter = 4000, random_state = 42, verbose = True, loss = 'log'))
+clf.append(SGDClassifier())
 clf.append(svm.SVC(verbose = True))
 clf.append(GaussianNB())
 clf.append(LogisticRegression(verbose = True))
 
-
+# %%
 #Cross Validation of model: K - Fold
 #Cross Validation done to get best model 
-for i in range(len(clf)):
-    trainsize = 1000 #using a smaller amount of data to reduce computation time 
-    X_test = X_test[0:trainsize]
-    Y_test = Y_test[0:trainsize]
+for i in range(len(clf)): 
     k_folds = KFold(n_splits = 5)
-    scores = cross_val_score(clf[i], X_test, Y_test, cv = k_folds)
+    scores = cross_val_score(clf[i], X_test_mini, Y_test_mini, cv = k_folds)
     print("Cross Validation Scores: ", scores)
     print("Average CV Score: ", scores.mean())
     print("Number of CV Scores used in Average: ", len(scores))
     print("done:" ,clf[i])
-
-
+#%%
+#Using GridSearchCV for hyperparameter selection 
+#defining the parameter grid 
+paramgrid = {'penalty':['l1','l2'], 'loss':['hinge', 'modified_huber','squared_hinge'], 'learning_rate':['adaptive', 'optimal']} 
+grid = GridSearchCV(SGDClassifier(), paramgrid, refit = True, verbose = 2,n_jobs=-1)
+grid.fit(X_train_mini,Y_train_mini)
+grid_pred = grid.predict(X_test_mini)
+print(grid.best_params_)
+print(classification_report(Y_test_mini,grid_pred))
+# %%
 #Training the model on dataset
-clf_best = LogisticRegression()
+clf_best = SGDClassifier(learning_rate='optimal', loss = 'squared_hinge', penalty = 'l1')
 clf_best.fit(X_train, Y_train)
 y_pred = clf_best.predict(X_test)
-print('Accuracy: {:.2f}'.format(accuracy_score(Y_test, y_pred)))
+print('Accuracy: {:.2f}'.format(accuracy_score(Y_test, y_pred))) 
+# %%
