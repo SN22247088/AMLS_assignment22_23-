@@ -2,62 +2,109 @@
 #General
 import pandas
 import numpy as np
+
 #sklearn 
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
 from sklearn.model_selection import KFold, cross_val_score 
+from sklearn.metrics import classification_report, confusion_matrix
 from sklearn.linear_model import SGDClassifier
 from sklearn import svm
 from sklearn.naive_bayes import GaussianNB 
 from sklearn.linear_model import LogisticRegression 
+from sklearn.model_selection import GridSearchCV
+
 #image/data processing 
 from PIL import Image
 
+#plots 
+import matplotlib.pyplot as plt
+from sklearn.model_selection import LearningCurveDisplay, ShuffleSplit
+from sklearn.metrics import ConfusionMatrixDisplay
+from sklearn.model_selection import learning_curve
 
-#Load Data 
+
+#Load training data 
 #importing the labeled csv
 features = pandas.read_csv('/Users/samreenabbas/Downloads/ML Coursework/dataset_AMLS_22-23/celeba/labels.csv', delimiter = '\t')
-y = features["gender"].values
+ytrain = features["gender"].values
 
 #importing the images
 folder_dir = "/Users/samreenabbas/Downloads/ML Coursework/dataset_AMLS_22-23/celeba/img/"
-x = []
+xtrain = []
 #adding flattened images to an array
-for i in range(len(y)):
+for i in range(len(ytrain)):
+    img = Image.open(folder_dir + str(i) + ".jpg")
+    img = img.convert('L')
+    img = np.array(img).flatten()
+    xtrain.append(img)
+
+
+#loading the test data
+features = pandas.read_csv('/Users/samreenabbas/Downloads/ML Coursework/dataset_AMLS_22-23_test/celeba_test/labels.csv', delimiter = '\t')
+ytest = features["gender"].values
+
+#importing the images
+folder_dir = "/Users/samreenabbas/Downloads/ML Coursework/dataset_AMLS_22-23_test/celeba_test/img/"
+xtest = []
+#adding flattened images to an array
+for i in range(len(ytest)):
     img = Image.open(folder_dir + str(i) + ".jpg")
     img = np.array(img).flatten()
-    x.append(img)
-    
+    xtest.append(img)
+  
 
-#train and test sets
-X_train, X_test, Y_train, Y_test = train_test_split(x, y, test_size = 0.2)
+#train and test sets - to reduce data size and computation time during CV
+X_train, X_test, Y_train, Y_test = train_test_split(xtrain, ytrain, test_size = 0.2)
+trainsize = 1000 #using a smaller amount of data to reduce computation time 
+X_train_mini = X_train[0:trainsize]
+Y_train_mini = Y_train[0:trainsize] 
+X_test_mini = X_test[0:trainsize]
+Y_test_mini = Y_test[0:trainsize]
 
 
 #Defining the classifiers 
 clf = []
-clf.append(SGDClassifier(learning_rate = 'optimal', penalty = 'l1', alpha = 1e-4, max_iter = 4000, random_state = 42, verbose = True, loss = 'log'))
-clf.append(svm.SVC(verbose = True))
+clf.append(SGDClassifier())
+clf.append(svm.SVC())
 clf.append(GaussianNB())
-clf.append(LogisticRegression(verbose = True))
+clf.append(LogisticRegression())
 
 
 #Cross Validation of model: K - Fold
 #Cross Validation done to get best model 
 for i in range(len(clf)):
     trainsize = 1000  # using a smaller amount of data to reduce computation time 
-    X_test = X_test[0:trainsize]
-    Y_test = Y_test[0:trainsize]
     k_folds = KFold(n_splits = 5)
-    scores = cross_val_score(clf[i], X_test, Y_test, cv = k_folds)
+    scores = cross_val_score(clf[i], X_test_mini, Y_test_mini, cv = k_folds)
     print("Cross Validation Scores: ", scores)
     print("Average CV Score: ", scores.mean())
     print("Number of CV Scores used in Average: ", len(scores))
     print("done:" ,clf[i])
 
 
+#Using GridSearchCV for hyperparameter selection 
+#defining the parameter grid 
+paramgrid = {'penalty':['l1','l2'], 'loss':['hinge', 'modified_huber','squared_hinge', 'log_loss'], 'learning_rate':['adaptive', 'optimal']} 
+grid = GridSearchCV(SGDClassifier(), paramgrid, refit = True, verbose = 2,n_jobs=-1)
+grid.fit(X_train_mini,Y_train_mini)
+grid_pred = grid.predict(X_test_mini)
+print(grid.best_params_)
+print(classification_report(Y_test_mini,grid_pred))
+
+
 #training the model on training and test set 
-clf_best = LogisticRegression()
-clf_best.fit(X_train, Y_train)
-y_pred = clf_best.predict(X_test)
-print('Accuracy: {:.2f}'.format(accuracy_score(Y_test, y_pred)))
+clf_best = SGDClassifier(learning_rate = 'optimal', loss = 'hinge', penalty = 'l1')
+clf_best.fit(xtrain, ytrain)
+
+
+#testing
+y_pred = clf_best.predict(xtest)
+mat = confusion_matrix(ytest, y_pred)
+print('Accuracy: {:.2f}'.format(accuracy_score(ytest, y_pred)))
+print(classification_report(ytest, y_pred))
+print('Confusion Matrix:')
+display = ConfusionMatrixDisplay(confusion_matrix = mat, display_labels = None)
+display.plot()
+plt.show()
 
