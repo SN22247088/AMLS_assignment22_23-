@@ -2,43 +2,61 @@
 #General 
 import pandas
 import numpy as np
+
 #Image/Data processing 
 from PIL import Image
+
 #sklearn
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import SGDClassifier
 from sklearn.metrics import accuracy_score
+from sklearn.metrics import classification_report, confusion_matrix
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import KFold, cross_val_score 
+from sklearn.model_selection import GridSearchCV
+from sklearn.metrics import ConfusionMatrixDisplay 
+import matplotlib.pyplot as plt 
 
 
-#Load Data 
+#Load the training Data 
 #importing the labeled csv
 
 features = pandas.read_csv('/Users/samreenabbas/Downloads/ML Coursework/dataset_AMLS_22-23/cartoon_set/labels.csv', delimiter = '\t')
-y = features["face_shape"].values
-
-#importing the images
-x = []
-for i in range(len(y)):
-    img = Image.open("/Users/samreenabbas/Downloads/ML Coursework/dataset_AMLS_22-23/cartoon_set/img/" + str(i) + ".png")
-    img = np.array(img).flatten()
-    x.append(img)
-    
-
-#train and test sets
-X_train, X_test, Y_train, Y_test = train_test_split(x, y, test_size = 0.2)
-
+ytrain = features["face_shape"].values
 #reducing training data size due to reduce computation time 
 trainsize = 1000
-testsize = 0.4*trainsize
-X_train = X_train[0:trainsize]
-Y_train = Y_train[0:trainsize]
-X_test = X_test[0:trainsize]
-Y_test = Y_test[0:trainsize]
 
-#defining the classifier 
+#importing the images
+xtrain = []
+for i in range(len(ytrain)):
+    img = Image.open("/Users/samreenabbas/Downloads/ML Coursework/dataset_AMLS_22-23/cartoon_set/img/" + str(i) + ".png")
+    img = np.array(img).flatten()
+    xtrain.append(img)
+
+
+#Loading the test data
+features = pandas.read_csv('/Users/samreenabbas/Downloads/ML Coursework/dataset_AMLS_22-23_test/cartoon_set_test/labels.csv', delimiter = '\t')
+ytest = features["face_shape"].values
+
+#importing the images
+xtest = []
+for i in range(len(ytest)):
+    img = Image.open("/Users/samreenabbas/Downloads/ML Coursework/dataset_AMLS_22-23_test/cartoon_set_test/img/" + str(i) + ".png")
+    img = np.array(img).flatten()
+    xtest.append(img)
+
+
+#training
 clf = RandomForestClassifier()
-clf.fit(X_train,Y_train)
-y_pred = clf.predict(X_test)
-print('Accuracy: {:.2f}'.format(accuracy_score(Y_test, y_pred)))
+clf.fit(xtrain[0:trainsize], ytrain[0:trainsize])
+
+
+#testing
+y_pred = clf.predict(xtest)
+mat = confusion_matrix(ytest, y_pred)
+print('Accuracy: {:.2f}'.format(accuracy_score(ytest, y_pred)))
+print(classification_report(ytest, y_pred))
+print('Confusion Matrix:')
+display = ConfusionMatrixDisplay(confusion_matrix = mat, display_labels = None)
+display.plot()
+plt.show()
