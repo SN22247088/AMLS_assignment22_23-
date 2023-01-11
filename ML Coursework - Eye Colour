@@ -4,65 +4,147 @@ import pandas
 import numpy as np
 #image processing 
 from PIL import Image
+import matplotlib.pyplot as plt 
 #sklearn
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
 from sklearn.model_selection import KFold, cross_val_score 
+from sklearn.metrics import classification_report, confusion_matrix
 from sklearn.tree import DecisionTreeClassifier 
 from sklearn.ensemble import RandomForestClassifier 
 from sklearn.neighbors import KNeighborsClassifier 
 from sklearn.linear_model import LogisticRegression 
+from sklearn.metrics import ConfusionMatrixDisplay
+from sklearn.model_selection import LearningCurveDisplay, ShuffleSplit
+
+#defining paths
+B2_train_csv = "Datasets/cartoon_set/labels.csv"
+B2_train_img = "Datasets/cartoon_set/img/"
+B2_test_csv = "Datasets/cartoon_set_test/labels.csv"
+B2_test_img = "Datasets/cartoon_set_test/img/"
 
 
-#Load Data 
+#defining a function to load the data 
+def import_train_data(csv_path, img_path, feature):
 #importing the labeled csv
-
-features = pandas.read_csv('/Users/samreenabbas/Downloads/ML Coursework/dataset_AMLS_22-23/cartoon_set/labels.csv', delimiter = '\t')
-y = features["eye_color"].values
+    features = pandas.read_csv(csv_path, delimiter = '\t')
+    ytrain = features[feature].values
 
 #importing the images into an array 
-x = []
-for i in range(len(y)):
-    img = Image.open("/Users/samreenabbas/Downloads/ML Coursework/dataset_AMLS_22-23/cartoon_set/img/" + str(i) + ".png")
-    #crop image to get just the eyes
-    box = (170, 235, 330, 295)
-    img = img.crop(box)
-    img = np.array(img).flatten()
-    x.append(img)
+    xtrain = []
+    for i in range(len(ytrain)):
+        img = Image.open(img_path + str(i) + ".png")
+        #crop image to get just the eyes
+        box = (170, 235, 330, 295)
+        img = img.crop(box)
+        img = np.array(img).flatten()
+        x.append(img)
+    return train,ytrain
+
+
+#loading the test data
+def import_test_data(csv_path, img_path, feature):
+    features = pandas.read_csv(csv_path, delimiter = '\t')
+    ytest = features[feature].values
+
+    #importing the images
+    folder_dir = img_path
+    xtest = []
+    #adding flattened images to an array
+    for i in range(len(ytest)):
+        img = Image.open(folder_dir + str(i) + ".png")
+        #crop image to get just the eyes
+        box = (170, 235, 330, 295)
+        img = img.crop(box)
+        img = np.array(img).flatten()
+        xtest.append(img) 
+    return xtest, ytest
+
+
+#train and test sets
+#defining a function for the reduced test and train sets
+def test_train(xtrain, ytrain):
+    X_train, X_test, Y_train, Y_test = train_test_split(xtrain, ytrain, test_size = 0.2)
+    trainsize = 1000 #using a smaller amount of data to reduce computation time 
+    X_train_mini = X_train[0:trainsize] 
+    Y_train_mini = Y_train[0:trainsize] 
+    X_test_mini = X_test[0:trainsize]
+    Y_test_mini = Y_test[0:trainsize]
+    return X_train_mini, Y_train_mini, X_test_mini, Y_test_mini 
     
-
-#train and test sets
-X_train, X_test, Y_train, Y_test = train_test_split(x, y, test_size = 0.2)
-#train and test sets
-X_train, X_test, Y_train, Y_test = train_test_split(x, y, test_size = 0.2)
-trainsize = 1000
-testsize = 0.4*trainsize
-X_train = X_train[0:trainsize]
-Y_train = Y_train[0:trainsize]
-X_test = X_test[0:trainsize]
-Y_test = Y_test[0:trainsize]
-
-
+    
 #Defining the classifiers 
-clf = []
-clf.append(DecisionTreeClassifier())
-clf.append(RandomForestClassifier())
-clf.append(KNeighborsClassifier())
-clf.append(LogisticRegression())
+def multiclass_classifiers():
+    clf = []
+    clf.append(DecisionTreeClassifier())
+    clf.append(RandomForestClassifier())
+    clf.append(KNeighborsClassifier())
+    clf.append(LogisticRegression())
+    return clf
 
 
 #Cross Validation of model: K - Fold
 #Cross Validation done to get best model 
-for i in range(len(clf)):
-    k_folds = KFold(n_splits = 5)
-    scores = cross_val_score(clf[i], X_test, Y_test, cv = k_folds)
-    print("Cross Validation Scores: ", scores)
-    print("Average CV Score: ", scores.mean())
-    print("Number of CV Scores used in Average: ", len(scores))
-    print("done:" ,clf[i])
+def kfold_eyes(clf, X_test_mini, Y_test_mini):
+    for i in range(len(clf)):
+        k_folds = KFold(n_splits = 5)
+        scores = cross_val_score(clf[i], X_test_mini, Y_test_mini, cv = k_folds)
+        print("Cross Validation Scores: ", scores)
+        print("Average CV Score: ", scores.mean())
+        print("Number of CV Scores used in Average: ", len(scores))
+        print("done:" ,clf[i])
 
-#training the classifier on training and test data
-clf_best = DecisionTreeClassifier()
-clf_best.fit(X_train, Y_train)
-y_pred = clf_best.predict(X_test)
-print('Accuracy: {:.2f}'.format(accuracy_score(Y_test, y_pred)))
+
+#training 
+def Classifier_RF_eyes(xtrain,ytrain):
+    clf = RandomForestClassifier()
+    clf = clf.fit(xtrain, ytrain)
+    return clf
+
+
+#learning curves
+def learning_curve_RF(xtrain,ytrain,clf_best):
+    fig, ax = plt.subplots(1, 1, figsize=(5, 5))
+    fig.subplots_adjust(bottom=0.2, left=0.2)
+    common_params = {
+        "X": xtrain[0:200],
+        "y": ytrain[0:200],
+        "train_sizes": np.linspace(0.1, 1.0, 5),
+        "cv": KFold(n_splits=5),
+        "score_type": "both",
+        "n_jobs": -1,
+        "line_kw": {"marker": "o"},
+        "std_display_style": "fill_between",
+        "score_name": "Accuracy",
+        }
+
+    LearningCurveDisplay.from_estimator(clf_best, **common_params, ax=ax)
+    handles, label = ax.get_legend_handles_labels()
+    ax.legend(handles[:2], ["Training Score", "Test Score"])
+    ax.set_title(f"Learning Curve for {clf_best.__class__.__name__}")
+
+
+#testing
+def test_RF(clf,xtest,ytest):
+    y_pred = clf.predict(xtest)
+    mat = confusion_matrix(ytest, y_pred)
+    print('Accuracy: {:.2f}'.format(accuracy_score(ytest, y_pred)))
+    print(classification_report(ytest, y_pred))
+    print('Confusion Matrix:')
+    display = ConfusionMatrixDisplay(confusion_matrix = mat, display_labels = None)
+    display.plot()
+    plt.show() 
+
+
+#running everything on the eye color training and test sets
+def run_eyes():
+    xtrain, ytrain = import_train_data(B2_train_csv,B2_train_img, "eye_color")
+    xtest, ytest = import_test_data(B2_test_csv, B2_test_img, "eye_color")
+    xtrainmini, ytrainmini, xtestmini, ytestmini = test_train(xtrain,ytrain)
+    clf = multiclass_classifiers()
+    kfold_eyes(clf, xtestmini, ytestmini)
+    clf_best = Classifier_RF_eyes(xtrain, ytrain)
+    learning_curve_RF(xtrain, ytrain,clf)
+    test_RF(clf_best,xtest,ytest) 
+
+run_eyes() 
