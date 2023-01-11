@@ -26,3 +26,4 @@ the last two cells run the models on the train and test data that is uploaded. T
 the individual files solve all 4 tasks saperately. the process to run them is the same as the main file. Upload the relevant paths to each file and hit run. 
 
 # GitHub link: 
+https://github.com/Samreen-Abbas/ML-Coursework-
