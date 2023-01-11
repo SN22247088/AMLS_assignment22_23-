@@ -1,0 +1,338 @@
+#Import Libraries 
+#General
+import pandas
+import numpy as np
+
+#sklearn 
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score
+from sklearn.model_selection import KFold, cross_val_score 
+from sklearn.metrics import classification_report, confusion_matrix
+from sklearn.linear_model import SGDClassifier
+from sklearn import svm
+from sklearn.naive_bayes import GaussianNB 
+from sklearn.linear_model import LogisticRegression 
+from sklearn.model_selection import GridSearchCV
+from sklearn.tree import DecisionTreeClassifier 
+from sklearn.ensemble import RandomForestClassifier 
+from sklearn.neighbors import KNeighborsClassifier 
+from sklearn.model_selection import LearningCurveDisplay, ShuffleSplit 
+from sklearn.metrics import ConfusionMatrixDisplay
+
+#image/data processing 
+from PIL import Image
+import matplotlib.pyplot as plt
+
+
+#defining the paths
+#Binary Tasks
+A_train_csv = "Datasets/celeba/labels.csv"
+A_train_img = "Datasets/celeba/img/"
+A_test_csv = "Datasets/celeba_test/labels.csv"
+A_test_img = "Datasets/celeba_test/img/"
+
+#Multiclass Tasks
+B_train_csv = "Datasets/cartoon_set/labels.csv"
+B_train_img = "Datasets/cartoon_set/img/"
+B_test_csv = "Datasets/cartoon_set_test/labels.csv"
+B_test_img = "Datasets/cartoon_set_test/img/"
+
+
+#defining a function to load the data 
+def import_train_data(csv_path, img_path, feature):
+#importing the labeled csv
+    features = pandas.read_csv(csv_path, delimiter = '\t')
+    ytrain = features[feature].values
+
+#importing the images
+    folder_dir = img_path
+    xtrain = []
+#adding flattened images to an array
+    for i in range(len(ytrain)):
+        img = Image.open(folder_dir + str(i) + ".jpg")
+        img = np.array(img).flatten()
+        xtrain.append(img)
+    return xtrain, ytrain 
+
+
+#loading the test data
+def import_test_data(csv_path, img_path, feature):
+    features = pandas.read_csv(csv_path, delimiter = '\t')
+    ytest = features[feature].values
+
+    #importing the images
+    folder_dir = img_path
+    xtest = []
+    #adding flattened images to an array
+    for i in range(len(ytest)):
+        img = Image.open(folder_dir + str(i) + ".jpg")
+        img = np.array(img).flatten()
+        xtest.append(img)
+    return xtest, ytest 
+
+def import_train_data_Faceshape(csv_path, img_path, feature):
+#importing the labeled csv
+    features = pandas.read_csv(csv_path, delimiter = '\t')
+    ytrain = features[feature].values
+
+#importing the images
+    folder_dir = img_path
+    xtrain = []
+#adding flattened images to an array
+    for i in range(len(ytrain)):
+        img = Image.open(folder_dir + str(i) + ".png")
+        img = np.array(img).flatten()
+        xtrain.append(img)
+    return xtrain, ytrain 
+
+
+#loading the test data
+def import_test_data_Faceshape(csv_path, img_path, feature):
+    features = pandas.read_csv(csv_path, delimiter = '\t')
+    ytest = features[feature].values
+
+    #importing the images
+    folder_dir = img_path
+    xtest = []
+    #adding flattened images to an array
+    for i in range(len(ytest)):
+        img = Image.open(folder_dir + str(i) + ".png")
+        img = np.array(img).flatten()
+        xtest.append(img)
+    return xtest, ytest 
+
+def import_train_data_eyes(csv_path, img_path, feature):
+#importing the labeled csv
+    features = pandas.read_csv(csv_path, delimiter = '\t')
+    ytrain = features[feature].values
+
+#importing the images
+    folder_dir = img_path
+    xtrain = []
+#adding flattened images to an array
+    for i in range(len(ytrain)):
+        img = Image.open(folder_dir + str(i) + ".png")
+        #crop image to get just the eyes
+        box = (170, 235, 330, 295)
+        img = img.crop(box)
+        img = np.array(img).flatten()
+        xtrain.append(img)
+    return xtrain, ytrain
+
+#loading the test data
+def import_test_data_eyes(csv_path, img_path, feature):
+    features = pandas.read_csv(csv_path, delimiter = '\t')
+    ytest = features[feature].values
+
+    #importing the images
+    folder_dir = img_path
+    xtest = []
+    #adding flattened images to an array
+    for i in range(len(ytest)):
+        img = Image.open(folder_dir + str(i) + ".png")
+        #crop image to get just the eyes
+        box = (170, 235, 330, 295)
+        img = img.crop(box)
+        img = np.array(img).flatten()
+        xtest.append(img) 
+    return xtest,ytest
+
+
+#test_train split for CV
+def test_train(xtrain, ytrain):
+    X_train, X_test, Y_train, Y_test = train_test_split(xtrain, ytrain, test_size = 0.2)
+    trainsize = 1000 #using a smaller amount of data to reduce computation time 
+    X_train_mini = X_train[0:trainsize] 
+    Y_train_mini = Y_train[0:trainsize] 
+    X_test_mini = X_test[0:trainsize]
+    Y_test_mini = Y_test[0:trainsize]
+    return X_train_mini, Y_train_mini, X_test_mini, Y_test_mini 
+
+
+#Defining classifiers for K FOLD
+def binary_classifiers():
+    clf = []
+    clf.append(SGDClassifier())
+    clf.append(svm.SVC())
+    clf.append(GaussianNB())
+    clf.append(LogisticRegression())
+    return clf
+
+def multiclass_classifiers():
+    clf = []
+    clf.append(DecisionTreeClassifier())
+    clf.append(RandomForestClassifier())
+    clf.append(KNeighborsClassifier())
+    clf.append(LogisticRegression())
+    return clf
+
+
+#Cross Validation of model: K - Fold
+#Cross Validation done to get best model 
+def kfold(clf, X_test_mini, Y_test_mini):
+    for i in range(len(clf)):
+        trainsize = 1000  # using a smaller amount of data to reduce computation time 
+        k_folds = KFold(n_splits = 5)
+        scores = cross_val_score(clf[i], X_test_mini, Y_test_mini, cv = k_folds)
+        print("Cross Validation Scores: ", scores)
+        print("Average CV Score: ", scores.mean())
+        print("Number of CV Scores used in Average: ", len(scores))
+        print("done:" ,clf[i])
+
+def kfold_eyes(clf, X_test_mini, Y_test_mini):
+    for i in range(len(clf)):
+        k_folds = KFold(n_splits = 5)
+        scores = cross_val_score(clf[i], X_test_mini, Y_test_mini, cv = k_folds)
+        print("Cross Validation Scores: ", scores)
+        print("Average CV Score: ", scores.mean())
+        print("Number of CV Scores used in Average: ", len(scores))
+        print("done:" ,clf[i])
+
+
+#hyperparameter tuning 
+def hyperpara_tuning_SGD(X_train_mini, Y_train_mini,X_test_mini, Y_test_mini):
+    paramgrid = {'penalty':['l1','l2'], 'loss':['hinge', 'modified_huber','squared_hinge', 'log_loss'], 'learning_rate':['adaptive', 'optimal']} 
+    grid = GridSearchCV(SGDClassifier(), paramgrid, refit = True, verbose = 2,n_jobs=-1)
+    grid.fit(X_train_mini,Y_train_mini)
+    grid_pred = grid.predict(X_test_mini)
+    print(grid.best_params_)
+    print(classification_report(Y_test_mini,grid_pred))
+
+
+#training the model on training and test set 
+def classifier_SGD(xtrain,ytrain):
+    clf_best = SGDClassifier(learning_rate = 'optimal', loss = 'hinge', penalty = 'l1')
+    clf_best = clf_best.fit(xtrain, ytrain)
+    return clf_best
+
+def Classifier_RF_Face(xtrain,ytrain):
+    clf = RandomForestClassifier()
+    clf = clf.fit(xtrain[0:1000], ytrain[0:1000])
+    return clf
+
+def Classifier_RF_eyes(xtrain,ytrain):
+    clf = RandomForestClassifier()
+    clf = clf.fit(xtrain, ytrain)
+    return clf
+
+
+#learning curves
+def learning_curve_SGD(xtrain,ytrain,clf_best):
+    fig, ax = plt.subplots(1, 1, figsize=(5, 5))
+    fig.subplots_adjust(bottom=0.2, left=0.2)
+    common_params = {
+        "X": xtrain[0:2000],
+        "y": ytrain[0:2000],
+        "train_sizes": np.linspace(0.1, 1.0, 5),
+        "cv": KFold(n_splits=5),
+        "score_type": "both",
+        "n_jobs": -1,
+        "line_kw": {"marker": "o"},
+        "std_display_style": "fill_between",
+        "score_name": "Accuracy",
+        }
+
+    LearningCurveDisplay.from_estimator(clf_best, **common_params, ax=ax)
+    handles, label = ax.get_legend_handles_labels()
+    ax.legend(handles[:2], ["Training Score", "Test Score"])
+    ax.set_title(f"Learning Curve for {clf_best.__class__.__name__}")
+
+def learning_curve_RF(xtrain,ytrain,clf_best):
+    fig, ax = plt.subplots(1, 1, figsize=(5, 5))
+    fig.subplots_adjust(bottom=0.2, left=0.2)
+    common_params = {
+        "X": xtrain[0:200],
+        "y": ytrain[0:200],
+        "train_sizes": np.linspace(0.1, 1.0, 5),
+        "cv": KFold(n_splits=5),
+        "score_type": "both",
+        "n_jobs": -1,
+        "line_kw": {"marker": "o"},
+        "std_display_style": "fill_between",
+        "score_name": "Accuracy",
+        }
+
+    LearningCurveDisplay.from_estimator(clf_best, **common_params, ax=ax)
+    handles, label = ax.get_legend_handles_labels()
+    ax.legend(handles[:2], ["Training Score", "Test Score"])
+    ax.set_title(f"Learning Curve for {clf_best.__class__.__name__}")
+
+
+#testing
+def test_SGD(clf_best, xtest,ytest):
+    y_pred = clf_best.predict(xtest)
+    mat = confusion_matrix(ytest, y_pred)
+    print('Accuracy: {:.2f}'.format(accuracy_score(ytest, y_pred)))
+    print(classification_report(ytest, y_pred))
+    print('Confusion Matrix:')
+    display = ConfusionMatrixDisplay(confusion_matrix = mat, display_labels = None)
+    display.plot()
+    plt.show() 
+
+def test_RF(clf,xtest,ytest):
+    y_pred = clf.predict(xtest)
+    mat = confusion_matrix(ytest, y_pred)
+    print('Accuracy: {:.2f}'.format(accuracy_score(ytest, y_pred)))
+    print(classification_report(ytest, y_pred))
+    print('Confusion Matrix:')
+    display = ConfusionMatrixDisplay(confusion_matrix = mat, display_labels = None)
+    display.plot()
+    plt.show() 
+
+
+#running everything on the training and test sets
+def run_gender():
+    print("A1 - Gender recognition")
+    xtrain, ytrain = import_train_data(A_train_csv,A_train_img, "gender")
+    xtest, ytest = import_test_data(A_test_csv, A_test_img, "gender")
+    xtrainmini, ytrainmini, xtestmini, ytestmini = test_train(xtrain,ytrain)
+    clf = binary_classifiers()
+    kfold(clf, xtestmini, ytestmini)
+    hyperpara_tuning_SGD(xtrainmini,ytrainmini,xtestmini,ytestmini)
+    clf_best = classifier_SGD(xtrain, ytrain)
+    learning_curve_SGD(xtrain, ytrain,clf_best)
+    test_SGD(clf_best,xtest,ytest) 
+    print("A1 - Done")
+
+def run_smiling():
+    print("A2 - Smile detection")
+    xtrain, ytrain = import_train_data(A_train_csv,A_train_img, "smiling")
+    xtest, ytest = import_test_data(A_test_csv, A_test_img, "smiling")
+    xtrainmini, ytrainmini, xtestmini, ytestmini = test_train(xtrain,ytrain)
+    clf = binary_classifiers()
+    kfold(clf, xtestmini, ytestmini)
+    hyperpara_tuning_SGD(xtrainmini,ytrainmini,xtestmini,ytestmini)
+    clf_best = classifier_SGD(xtrain, ytrain)
+    learning_curve_SGD(xtrain, ytrain,clf_best)
+    test_SGD(clf_best,xtest,ytest) 
+    print("A2 - done")
+
+def run_faceshape():
+    print("B1 - Face Shape recognition")
+    xtrain, ytrain = import_train_data_Faceshape(B_train_csv,B_train_img, "face_shape")
+    xtest, ytest = import_test_data_Faceshape(B_test_csv, B_test_img, "face_shape")
+    clf = Classifier_RF_Face(xtrain, ytrain)
+    learning_curve_RF(xtrain,ytrain,clf)
+    test_RF(clf,xtest,ytest)
+    print("B1 - Done")
+
+def run_eyes():
+    print("B2 - Eye color recognition")
+    xtrain, ytrain = import_train_data_eyes(B_train_csv,B_train_img, "eye_color")
+    xtest, ytest = import_test_data_eyes(B_test_csv, B_test_img, "eye_color")
+    xtrainmini, ytrainmini, xtestmini, ytestmini = test_train(xtrain,ytrain)
+    clf = multiclass_classifiers()
+    kfold_eyes(clf, xtestmini, ytestmini)
+    clf_best = Classifier_RF_eyes(xtrain, ytrain)
+    learning_curve_RF(xtrain, ytrain,clf_best)
+    test_RF(clf_best,xtest,ytest)
+    print("B2 - Done")
+
+
+#running binary tasks
+run_gender()
+run_smiling()
+
+#running multiclass tasks
+run_faceshape()
+run_eyes() 
