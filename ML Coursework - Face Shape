@@ -7,56 +7,100 @@ import numpy as np
 from PIL import Image
 
 #sklearn
-from sklearn.model_selection import train_test_split
-from sklearn.linear_model import SGDClassifier
 from sklearn.metrics import accuracy_score
 from sklearn.metrics import classification_report, confusion_matrix
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import KFold, cross_val_score 
-from sklearn.model_selection import GridSearchCV
 from sklearn.metrics import ConfusionMatrixDisplay 
 import matplotlib.pyplot as plt 
+from sklearn.model_selection import LearningCurveDisplay, ShuffleSplit
 
 
-#Load the training Data 
+#defining the paths
+B1_train_csv = "Datasets/cartoon_set/labels.csv"
+B1_train_img = "Datasets/cartoon_set/img/"
+B1_test_csv = "Datasets/cartoon_set_test/labels.csv"
+B1_test_img = "Datasets/cartoon_set_test/img/"
+
+
+#defining a function to load the data 
+def import_train_data(csv_path, img_path, feature):
 #importing the labeled csv
-
-features = pandas.read_csv('/Users/samreenabbas/Downloads/ML Coursework/dataset_AMLS_22-23/cartoon_set/labels.csv', delimiter = '\t')
-ytrain = features["face_shape"].values
-#reducing training data size due to reduce computation time 
-trainsize = 1000
+    features = pandas.read_csv(csv_path, delimiter = '\t')
+    ytrain = features[feature].values
 
 #importing the images
-xtrain = []
-for i in range(len(ytrain)):
-    img = Image.open("/Users/samreenabbas/Downloads/ML Coursework/dataset_AMLS_22-23/cartoon_set/img/" + str(i) + ".png")
-    img = np.array(img).flatten()
-    xtrain.append(img)
+    folder_dir = img_path
+    xtrain = []
+#adding flattened images to an array
+    for i in range(len(ytrain)):
+        img = Image.open(folder_dir + str(i) + ".jpg")
+        img = np.array(img).flatten()
+        xtrain.append(img)
+    return xtrain, ytrain 
 
 
-#Loading the test data
-features = pandas.read_csv('/Users/samreenabbas/Downloads/ML Coursework/dataset_AMLS_22-23_test/cartoon_set_test/labels.csv', delimiter = '\t')
-ytest = features["face_shape"].values
+#loading the test data
+def import_test_data(csv_path, img_path, feature):
+    features = pandas.read_csv(csv_path, delimiter = '\t')
+    ytest = features[feature].values
 
-#importing the images
-xtest = []
-for i in range(len(ytest)):
-    img = Image.open("/Users/samreenabbas/Downloads/ML Coursework/dataset_AMLS_22-23_test/cartoon_set_test/img/" + str(i) + ".png")
-    img = np.array(img).flatten()
-    xtest.append(img)
+    #importing the images
+    folder_dir = img_path
+    xtest = []
+    #adding flattened images to an array
+    for i in range(len(ytest)):
+        img = Image.open(folder_dir + str(i) + ".jpg")
+        img = np.array(img).flatten()
+        xtest.append(img)
+    return xtest, ytest 
 
 
 #training
-clf = RandomForestClassifier()
-clf.fit(xtrain[0:trainsize], ytrain[0:trainsize])
+def Classifier_RF_Face(xtrain,ytrain):
+    clf = RandomForestClassifier()
+    clf = clf.fit(xtrain[0:1000], ytrain[0:1000])
+    return clf
+
+
+def learning_curve_RF(xtrain,ytrain,clf_best):
+    fig, ax = plt.subplots(1, 1, figsize=(5, 5))
+    fig.subplots_adjust(bottom=0.2, left=0.2)
+    common_params = {
+        "X": xtrain[0:200],
+        "y": ytrain[0:200],
+        "train_sizes": np.linspace(0.1, 1.0, 5),
+        "cv": KFold(n_splits=5),
+        "score_type": "both",
+        "n_jobs": -1,
+        "line_kw": {"marker": "o"},
+        "std_display_style": "fill_between",
+        "score_name": "Accuracy",
+        }
+
+    LearningCurveDisplay.from_estimator(clf_best, **common_params, ax=ax)
+    handles, label = ax.get_legend_handles_labels()
+    ax.legend(handles[:2], ["Training Score", "Test Score"])
+    ax.set_title(f"Learning Curve for {clf_best.__class__.__name__}")
 
 
 #testing
-y_pred = clf.predict(xtest)
-mat = confusion_matrix(ytest, y_pred)
-print('Accuracy: {:.2f}'.format(accuracy_score(ytest, y_pred)))
-print(classification_report(ytest, y_pred))
-print('Confusion Matrix:')
-display = ConfusionMatrixDisplay(confusion_matrix = mat, display_labels = None)
-display.plot()
-plt.show()
+def test_RF(clf,xtest,ytest):
+    y_pred = clf.predict(xtest)
+    mat = confusion_matrix(ytest, y_pred)
+    print('Accuracy: {:.2f}'.format(accuracy_score(ytest, y_pred)))
+    print(classification_report(ytest, y_pred))
+    print('Confusion Matrix:')
+    display = ConfusionMatrixDisplay(confusion_matrix = mat, display_labels = None)
+    display.plot()
+    plt.show() 
+
+
+def run_faceshape():
+    xtrain, ytrain = import_train_data(B1_train_csv,B1_train_img, "face_shape")
+    xtest, ytest = import_test_data(B1_test_csv, B1_test_img, "face_shape")
+    clf = Classifier_RF_Face(xtrain, ytrain)
+    learning_curve_RF(xtrain, ytrain,clf)
+    test_RF(clf,xtest,ytest)
+
+run_faceshape()
