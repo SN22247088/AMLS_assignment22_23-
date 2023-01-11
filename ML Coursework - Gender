@@ -2,7 +2,6 @@
 #General
 import pandas
 import numpy as np
-
 #sklearn 
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
@@ -13,98 +12,148 @@ from sklearn import svm
 from sklearn.naive_bayes import GaussianNB 
 from sklearn.linear_model import LogisticRegression 
 from sklearn.model_selection import GridSearchCV
-
 #image/data processing 
 from PIL import Image
-
-#plots 
 import matplotlib.pyplot as plt
-from sklearn.model_selection import LearningCurveDisplay, ShuffleSplit
+from sklearn.model_selection import LearningCurveDisplay, ShuffleSplit 
 from sklearn.metrics import ConfusionMatrixDisplay
-from sklearn.model_selection import learning_curve
+
+#defining the paths
+A1_train_csv = "Datasets/celeba/labels.csv"
+A1_train_img = "Datasets/celeba/img/"
+A1_test_csv = "Datasets/celeba_test/labels.csv"
+A1_test_img = "Datasets/celeba_test/img/"
 
 
-#Load training data 
+#defining a function to load the data 
+def import_train_data(csv_path, img_path, feature):
 #importing the labeled csv
-features = pandas.read_csv('/Users/samreenabbas/Downloads/ML Coursework/dataset_AMLS_22-23/celeba/labels.csv', delimiter = '\t')
-ytrain = features["gender"].values
+    features = pandas.read_csv(csv_path, delimiter = '\t')
+    ytrain = features[feature].values
 
 #importing the images
-folder_dir = "/Users/samreenabbas/Downloads/ML Coursework/dataset_AMLS_22-23/celeba/img/"
-xtrain = []
+    folder_dir = img_path
+    xtrain = []
 #adding flattened images to an array
-for i in range(len(ytrain)):
-    img = Image.open(folder_dir + str(i) + ".jpg")
-    img = img.convert('L')
-    img = np.array(img).flatten()
-    xtrain.append(img)
+    for i in range(len(ytrain)):
+        img = Image.open(folder_dir + str(i) + ".jpg")
+        img = np.array(img).flatten()
+        xtrain.append(img)
+    return xtrain, ytrain 
 
 
 #loading the test data
-features = pandas.read_csv('/Users/samreenabbas/Downloads/ML Coursework/dataset_AMLS_22-23_test/celeba_test/labels.csv', delimiter = '\t')
-ytest = features["gender"].values
+def import_test_data(csv_path, img_path, feature):
+    features = pandas.read_csv(csv_path, delimiter = '\t')
+    ytest = features[feature].values
 
-#importing the images
-folder_dir = "/Users/samreenabbas/Downloads/ML Coursework/dataset_AMLS_22-23_test/celeba_test/img/"
-xtest = []
-#adding flattened images to an array
-for i in range(len(ytest)):
-    img = Image.open(folder_dir + str(i) + ".jpg")
-    img = np.array(img).flatten()
-    xtest.append(img)
-  
-
-#train and test sets - to reduce data size and computation time during CV
-X_train, X_test, Y_train, Y_test = train_test_split(xtrain, ytrain, test_size = 0.2)
-trainsize = 1000 #using a smaller amount of data to reduce computation time 
-X_train_mini = X_train[0:trainsize]
-Y_train_mini = Y_train[0:trainsize] 
-X_test_mini = X_test[0:trainsize]
-Y_test_mini = Y_test[0:trainsize]
+    #importing the images
+    folder_dir = img_path
+    xtest = []
+    #adding flattened images to an array
+    for i in range(len(ytest)):
+        img = Image.open(folder_dir + str(i) + ".jpg")
+        img = np.array(img).flatten()
+        xtest.append(img)
+    return xtest, ytest 
 
 
-#Defining the classifiers 
-clf = []
-clf.append(SGDClassifier())
-clf.append(svm.SVC())
-clf.append(GaussianNB())
-clf.append(LogisticRegression())
+#defining a function for the reduced test and train sets
+def test_train(xtrain, ytrain):
+    X_train, X_test, Y_train, Y_test = train_test_split(xtrain, ytrain, test_size = 0.2)
+    trainsize = 1000 #using a smaller amount of data to reduce computation time 
+    X_train_mini = X_train[0:trainsize] 
+    Y_train_mini = Y_train[0:trainsize] 
+    X_test_mini = X_test[0:trainsize]
+    Y_test_mini = Y_test[0:trainsize]
+    return X_train_mini, Y_train_mini, X_test_mini, Y_test_mini 
+
+
+#Defining the classifiers
+def binary_classifiers():
+    clf = []
+    clf.append(SGDClassifier())
+    clf.append(svm.SVC())
+    clf.append(GaussianNB())
+    clf.append(LogisticRegression())
+    return clf
 
 
 #Cross Validation of model: K - Fold
 #Cross Validation done to get best model 
-for i in range(len(clf)):
-    trainsize = 1000  # using a smaller amount of data to reduce computation time 
-    k_folds = KFold(n_splits = 5)
-    scores = cross_val_score(clf[i], X_test_mini, Y_test_mini, cv = k_folds)
-    print("Cross Validation Scores: ", scores)
-    print("Average CV Score: ", scores.mean())
-    print("Number of CV Scores used in Average: ", len(scores))
-    print("done:" ,clf[i])
+def kfold(clf, X_test_mini, Y_test_mini):
+    for i in range(len(clf)):
+        trainsize = 1000  # using a smaller amount of data to reduce computation time 
+        k_folds = KFold(n_splits = 5)
+        scores = cross_val_score(clf[i], X_test_mini, Y_test_mini, cv = k_folds)
+        print("Cross Validation Scores: ", scores)
+        print("Average CV Score: ", scores.mean())
+        print("Number of CV Scores used in Average: ", len(scores))
+        print("done:" ,clf[i])
 
 
 #Using GridSearchCV for hyperparameter selection 
 #defining the parameter grid 
-paramgrid = {'penalty':['l1','l2'], 'loss':['hinge', 'modified_huber','squared_hinge', 'log_loss'], 'learning_rate':['adaptive', 'optimal']} 
-grid = GridSearchCV(SGDClassifier(), paramgrid, refit = True, verbose = 2,n_jobs=-1)
-grid.fit(X_train_mini,Y_train_mini)
-grid_pred = grid.predict(X_test_mini)
-print(grid.best_params_)
-print(classification_report(Y_test_mini,grid_pred))
+def hyperpara_tuning_SGD(X_train_mini, Y_train_mini,X_test_mini, Y_test_mini):
+    paramgrid = {'penalty':['l1','l2'], 'loss':['hinge', 'modified_huber','squared_hinge', 'log_loss'], 'learning_rate':['adaptive', 'optimal']} 
+    grid = GridSearchCV(SGDClassifier(), paramgrid, refit = True, verbose = 2,n_jobs=-1)
+    grid.fit(X_train_mini,Y_train_mini)
+    grid_pred = grid.predict(X_test_mini)
+    print(grid.best_params_)
+    print(classification_report(Y_test_mini,grid_pred))
 
 
 #training the model on training and test set 
-clf_best = SGDClassifier(learning_rate = 'optimal', loss = 'hinge', penalty = 'l1')
-clf_best.fit(xtrain, ytrain)
+def classifier_SGD(xtrain,ytrain):
+    clf_best = SGDClassifier(learning_rate = 'optimal', loss = 'hinge', penalty = 'l1')
+    clf_best = clf_best.fit(xtrain, ytrain)
+    return clf_best
+
+
+#learning curves
+def learning_curve_SGD(xtrain,ytrain,clf_best):
+    fig, ax = plt.subplots(1, 1, figsize=(5, 5))
+    fig.subplots_adjust(bottom=0.2, left=0.2)
+    common_params = {
+        "X": xtrain[0:2000],
+        "y": ytrain[0:2000],
+        "train_sizes": np.linspace(0.1, 1.0, 5),
+        "cv": KFold(n_splits=5),
+        "score_type": "both",
+        "n_jobs": -1,
+        "line_kw": {"marker": "o"},
+        "std_display_style": "fill_between",
+        "score_name": "Accuracy",
+        }
+
+    LearningCurveDisplay.from_estimator(clf_best, **common_params, ax=ax)
+    handles, label = ax.get_legend_handles_labels()
+    ax.legend(handles[:2], ["Training Score", "Test Score"])
+    ax.set_title(f"Learning Curve for {clf_best.__class__.__name__}")
 
 
 #testing
-y_pred = clf_best.predict(xtest)
-mat = confusion_matrix(ytest, y_pred)
-print('Accuracy: {:.2f}'.format(accuracy_score(ytest, y_pred)))
-print(classification_report(ytest, y_pred))
-print('Confusion Matrix:')
-display = ConfusionMatrixDisplay(confusion_matrix = mat, display_labels = None)
-display.plot()
-plt.show()
+def test_SDG(clf_best, xtest,ytest):
+    y_pred = clf_best.predict(xtest)
+    mat = confusion_matrix(ytest, y_pred)
+    print('Accuracy: {:.2f}'.format(accuracy_score(ytest, y_pred)))
+    print(classification_report(ytest, y_pred))
+    print('Confusion Matrix:')
+    display = ConfusionMatrixDisplay(confusion_matrix = mat, display_labels = None)
+    display.plot()
+    plt.show() 
 
+
+#running everything on the gender training and test sets
+def run_gender():
+    xtrain, ytrain = import_train_data(A1_train_csv,A1_train_img, "gender")
+    xtest, ytest = import_test_data(A1_test_csv, A1_test_img, "gender")
+    xtrainmini, ytrainmini, xtestmini, ytestmini = test_train(xtrain,ytrain)
+    clf = binary_classifiers()
+    kfold(clf, xtestmini, ytestmini)
+    hyperpara_tuning_SGD(xtrainmini,ytrainmini,xtestmini,ytestmini)
+    clf_best = classifier_SGD(xtrain, ytrain)
+    learning_curve_SGD(xtrain, ytrain,clf)
+    test_SDG(clf_best,xtest,ytest) 
+
+run_gender()
